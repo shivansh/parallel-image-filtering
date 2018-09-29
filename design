@@ -1,0 +1,51 @@
+master is process 0
+k-1 slave processes
+round-robin algorithm - since all computations are roughly of same complexity
+
+scheduling (master and slaves scheduled alternatively):
+    master -> slave_i -> master -> slave_i+1 -> ...
+
+a process is visited for the first time
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- process computes the result
+
+a process is re-visited
+~~~~~~~~~~~~~~~~~~~~~~~
+- slave sends the computed result to master
+- master receives the computed result (after waiting on the slave)
+- NOTE (1): master can only collect result from a slave when it revisits the
+  slave. As a result one last iteration has to be made over all the slaves to
+  get their computed results
+
+disadvantages:
+- if the number of processes is large, it is possible that the processes will
+  remain idle, since the time until a process is revisited is large
+  workaround?: give larger payload to each process
+
+Since the processes aren't running in a shared address space, we'll need to
+maintain a master process which will receive all the individual computations
+and save them in its own address space (and finally print to stdout).
+
+
+```
+# Take special care in verifying that we don't get stuck in a deadlock.
+process_rank = 1
+num_iterations = m*n + k-1
+result = NULL
+
+# The extra (k-1) in the condition below is to take into account NOTE (1)
+for index in 1...num_iterations:
+    process_rank = (process_rank) % n + 1
+
+    if my_rank == process_rank:
+	if index >= k:
+    	    # The slave is revisited
+    	    send result to master
+
+	if index lies in {1, m*n}:
+	    result = compute(index)
+
+    if my_rank == 0 && index >= k:
+	# the slave was revisited, and hence sent its computation
+	master receives result from slave (rank = process_rank)
+```
