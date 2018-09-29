@@ -35,7 +35,7 @@ result = NULL
 
 # The extra (k-1) in the condition below is to take into account NOTE (1)
 for index in 1...num_iterations:
-    process_rank = (process_rank) % n + 1
+    process_rank = (process_rank) % k + 1
 
     if my_rank == process_rank:
 	if index >= k:
