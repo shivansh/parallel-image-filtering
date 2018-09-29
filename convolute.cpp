@@ -1,30 +1,67 @@
 #include <cmath>
 #include <iostream>
+#include <stdexcept>
 #include <vector>
 using namespace std;
 
 typedef vector<vector<int>> vvi;
 typedef vector<vector<float>> vvf;
 
-// TODO: update the signature as follows -
-//      convolute(const vvi& image, const vvf& kernel, int index);
+// NOTE: index is computed in row-major order, and starts from 0.
+int convolute(const vvi& image, const vvf& kernel, vvi& output, int index) {
+    int m = image.size(), n = image[0].size();
+    int k = kernel.size();
 
-vvi convolute(const vvi& image, const vvf& kernel) {
+    // evaluate the row and column from index
+    int row = index / n, col = index % n;
+
+    if (row < 0 || row >= m || col < 0 || col >= n) {
+        throw invalid_argument("convolute: invalid value of index");
+    }
+
+    // evaluate coordinates of the top-left corner of the kernel
+    int p = row - k / 2, q = col - k / 2;
+
+    float accumulator = 0;
+    for (int i = p; i < p + k; ++i) {
+        for (int j = q; j < q + k; ++j) {
+            // NOTE: edge computations are handled via wrap.
+            int k_i = i - p, k_j = j - q;  // kernel indices
+            int m_i = i, m_j = j;          // matrix indices
+            if (i < 0) m_i += m;
+            if (j < 0) m_j += n;
+            if (i >= m) m_i -= m;
+            if (j >= n) m_j -= n;
+            accumulator += image[m_i][m_j] * kernel[k_i][k_j];
+        }
+    }
+    output[p + k / 2][q + k / 2] = round(accumulator);
+    return round(accumulator);
+}
+
+vvi convolute_ref(const vvi& image, const vvf& kernel) {
     // TODO: handle invalid input
     int m = image.size(), n = image[0].size();
     int k = kernel.size();
     vvi output(m, vector<int>(n, 0));
-    int p = 0, q = 0;  // coordinates of the top-left corner of the kernel
-    while (p + k <= m) {
+    int p = -(k / 2), q = -(k / 2);  // top-left corner of the kernel
+    while (p + k / 2 < m) {
         float accumulator = 0;
         for (int i = p; i < p + k; ++i) {
             for (int j = q; j < q + k; ++j) {
-                accumulator += image[i][j] * kernel[i - p][j - q];
+                // NOTE: edge computations are handled via wrap.
+                int k_i = i - p, k_j = j - q;  // kernel indices
+                int m_i = i, m_j = j;          // matrix indices
+                if (i < 0) m_i += m;
+                if (j < 0) m_j += n;
+                if (i >= m) m_i -= m;
+                if (j >= n) m_j -= n;
+                accumulator += image[m_i][m_j] * kernel[k_i][k_j];
             }
         }
         output[p + k / 2][q + k / 2] = round(accumulator);
-        if (++q > n - k) {
-            q = 0;
+        if (++q >= n - (k / 2)) {
+            q = -(k / 2);
             ++p;
         }
     }
@@ -47,12 +84,19 @@ int main() {
             cin >> kernel[i][j];
         }
     }
-    vvi output = convolute(image, kernel);
+
+    // Test for convolute_ref.
+    vvi output = convolute_ref(image, kernel);
     for (int i = 0; i < m; ++i) {
         for (int j = 0; j < n; ++j) {
             cout << output[i][j] << " ";
         }
         cout << endl;
     }
+
+    // Test for convolute.
+    vvi output(m, vector<int>(n, 0));
+    int index = 6;
+    cout << convolute(image, kernel, output, index) << endl;
     return 0;
 }
