@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
     }
 
     int num_iter = m * n + world_size - 1;
-    int process_rank = 1;
+    int process_rank = 0;
     for (int i = 1; i <= num_iter; ++i) {
         int result;
         process_rank = process_rank % world_size + 1;
