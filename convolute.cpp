@@ -1,14 +1,18 @@
 #include <cmath>
 #include <iostream>
 #include <stdexcept>
-#include <vector>
-using namespace std;
 
-typedef vector<vector<int>> vvi;
-typedef vector<vector<float>> vvf;
+#include "convolute.h"
 
 // NOTE: index is computed in row-major order, and starts from 0.
 int convolute(const vvi& image, const vvf& kernel, vvi& output, int index) {
+    if (image.size() == 0) {
+        throw invalid_argument("convolute_ref: empty image");
+    }
+    if (kernel.size() == 0) {
+        throw invalid_argument("convolute_ref: empty kernel");
+    }
+
     int m = image.size(), n = image[0].size();
     int k = kernel.size();
 
@@ -40,7 +44,13 @@ int convolute(const vvi& image, const vvf& kernel, vvi& output, int index) {
 }
 
 vvi convolute_ref(const vvi& image, const vvf& kernel) {
-    // TODO: handle invalid input
+    if (image.size() == 0) {
+        throw invalid_argument("convolute_ref: empty image");
+    }
+    if (kernel.size() == 0) {
+        throw invalid_argument("convolute_ref: empty kernel");
+    }
+
     int m = image.size(), n = image[0].size();
     int k = kernel.size();
     vvi output(m, vector<int>(n, 0));
@@ -95,8 +105,8 @@ int main() {
     }
 
     // Test for convolute.
-    vvi output(m, vector<int>(n, 0));
+    vvi new_output(m, vector<int>(n, 0));
     int index = 6;
-    cout << convolute(image, kernel, output, index) << endl;
+    cout << convolute(image, kernel, new_output, index) << endl;
     return 0;
 }
