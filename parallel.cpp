@@ -1,5 +1,5 @@
 #include <mpi.h>
-#include <cmath>
+#include <iomanip>
 #include <iostream>
 #include <stdexcept>
 #include <vector>
@@ -45,7 +45,7 @@ float convolute(const vvi& image, const vvf& kernel, int offset) {
             accumulator += image[m_i][m_j] * kernel[k_i][k_j];
         }
     }
-    return roundf(accumulator * 1000) / 1000;
+    return accumulator;
 }
 
 int main(int argc, char** argv) {
@@ -94,7 +94,7 @@ int main(int argc, char** argv) {
             // Slave process.
             if (i >= world_size) {
                 // Each slave will send its computed result when it's revisited.
-                MPI_Send(&result, 1, MPI_INT, master_rank, 0, MPI_COMM_WORLD);
+                MPI_Send(&result, 1, MPI_FLOAT, master_rank, 0, MPI_COMM_WORLD);
             }
             if (i <= m * n) {
                 result = convolute(image, kernel, i - 1);
@@ -106,7 +106,7 @@ int main(int argc, char** argv) {
             int offset = (i - 1) - world_size;  // offset into the matrix
             int num_slaves = world_size - 1;    // slave process count
             int rank = offset % num_slaves + 1;
-            MPI_Recv(&result, 1, MPI_INT, rank, 0, MPI_COMM_WORLD,
+            MPI_Recv(&result, 1, MPI_FLOAT, rank, 0, MPI_COMM_WORLD,
                      MPI_STATUS_IGNORE);
 
             // Evaluate {row, column} from the matrix offset and update output.
@@ -119,7 +119,8 @@ int main(int argc, char** argv) {
     if (world_rank == 0) {
         for (int i = 0; i < m; ++i) {
             for (int j = 0; j < n; ++j) {
-                cout << output[i][j] << " ";
+                // Round output to nearest 3 decimal places.
+                cout << setprecision(3) << fixed << output[i][j] << " ";
             }
             cout << endl;
         }
