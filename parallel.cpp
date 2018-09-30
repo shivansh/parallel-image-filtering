@@ -85,10 +85,10 @@ int main(int argc, char** argv) {
         }
     }
 
-    int num_iter = m * n + world_size - 1;
+    int num_iter = m * n + world_size;
     int process_rank = 0;
+    int result = -1;
     for (int i = 1; i <= num_iter; ++i) {
-        int result;
         process_rank = (process_rank + 1) % world_size;
         if (process_rank == 0) {
             ++process_rank;
@@ -107,9 +107,11 @@ int main(int argc, char** argv) {
 
         if (world_rank == 0 && i > world_size) {
             // The slave was revisited, and hence sent its computation
-            MPI_Recv(&result, 1, MPI_INT, process_rank, 0, MPI_COMM_WORLD,
+            int index = i - world_size - 1;   // offset into the matrix
+            int num_slaves = world_size - 1;  // slave process count
+            int rank = index % num_slaves + 1;
+            MPI_Recv(&result, 1, MPI_INT, rank, 0, MPI_COMM_WORLD,
                      MPI_STATUS_IGNORE);
-            int index = i - 1;  // offset into the matrix
             update(output, index, n, result);
         }
     }
