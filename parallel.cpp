@@ -89,22 +89,24 @@ int main(int argc, char** argv) {
     int process_rank = 0;
     for (int i = 1; i <= num_iter; ++i) {
         int result;
-        process_rank = process_rank % world_size + 1;
+        process_rank = (process_rank + 1) % world_size;
+        if (process_rank == 0) {
+            ++process_rank;
+        }
 
-        if (world_rank == process_rank) {
-            if (i >= k) {
-                // TODO: send result to master
+        if (world_rank == process_rank && process_rank != 0) {
+            // slave process
+            if (i >= world_size) {
                 MPI_Send(&result, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
             }
 
-            if (i >= 1 && i <= m * n) {
+            if (i <= m * n) {
                 result = convolute(image, kernel, i - 1);
             }
         }
 
-        if (world_rank == 0 && i >= k) {
+        if (world_rank == 0 && i > world_size) {
             // The slave was revisited, and hence sent its computation
-            // TODO: master receives result from slave (rank = process_rank)
             MPI_Recv(&result, 1, MPI_INT, process_rank, 0, MPI_COMM_WORLD,
                      MPI_STATUS_IGNORE);
             int index = i - 1;  // offset into the matrix
