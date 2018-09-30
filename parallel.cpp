@@ -12,7 +12,7 @@ typedef vector<vector<float>> vvf;
 // NOTE: `offset` is computed in row-major order, starting from 0.
 // convolute computes the result of convolution at a particular matrix cell.
 // The row and column number is computed using `offset`.
-int convolute(const vvi& image, const vvf& kernel, int offset) {
+float convolute(const vvi& image, const vvf& kernel, int offset) {
     if (image.size() == 0) {
         throw invalid_argument("convolute: empty image");
     }
@@ -45,7 +45,7 @@ int convolute(const vvi& image, const vvf& kernel, int offset) {
             accumulator += image[m_i][m_j] * kernel[k_i][k_j];
         }
     }
-    return round(accumulator);
+    return roundf(accumulator * 1000) / 1000;
 }
 
 int main(int argc, char** argv) {
@@ -53,7 +53,7 @@ int main(int argc, char** argv) {
     cin >> m >> n >> k;
     vvi image(m, vector<int>(n));
     vvf kernel(k, vector<float>(k));
-    vvi output(m, vector<int>(n));  // only master modifies output
+    vvf output(m, vector<float>(n));  // only master modifies output
     for (int i = 0; i < m; ++i) {
         for (int j = 0; j < n; ++j) {
             cin >> image[i][j];
@@ -82,7 +82,7 @@ int main(int argc, char** argv) {
     int num_iter = m * n + world_size;  // number of iterations
     int slave_rank = 0;
     int master_rank = 0;
-    int result;
+    float result;
     for (int i = 1; i <= num_iter; ++i) {
         // The slaves are visited in round-robin manner.
         slave_rank = (slave_rank + 1) % world_size;
