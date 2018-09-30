@@ -9,26 +9,27 @@ using namespace std;
 typedef vector<vector<int>> vvi;
 typedef vector<vector<float>> vvf;
 
-// NOTE: index is computed in row-major order, and starts from 0.
-int convolute(const vvi& image, const vvf& kernel, int index) {
+// NOTE: `offset` is computed in row-major order, starting from 0.
+// convolute computes the result of convolution at a particular matrix cell.
+// The row and column number is computed using `offset`.
+int convolute(const vvi& image, const vvf& kernel, int offset) {
     if (image.size() == 0) {
-        throw invalid_argument("convolute_ref: empty image");
+        throw invalid_argument("convolute: empty image");
     }
     if (kernel.size() == 0) {
-        throw invalid_argument("convolute_ref: empty kernel");
+        throw invalid_argument("convolute: empty kernel");
     }
 
     int m = image.size(), n = image[0].size();
     int k = kernel.size();
 
-    // evaluate the row and column from index
-    int row = index / n, col = index % n;
-
+    // Evaluate the row and column using offset.
+    int row = offset / n, col = offset % n;
     if (row < 0 || row >= m || col < 0 || col >= n) {
-        throw invalid_argument("convolute: invalid value of index");
+        throw invalid_argument("convolute: invalid value of offset");
     }
 
-    // evaluate coordinates of the top-left corner of the kernel
+    // Evaluate coordinates of the top-left corner of the kernel.
     int p = row - k / 2, q = col - k / 2;
 
     float accumulator = 0;
@@ -47,27 +48,7 @@ int convolute(const vvi& image, const vvf& kernel, int index) {
     return round(accumulator);
 }
 
-void update(vvi& output, int index, int n, int result) {
-    // evaluate the row and column from index
-    int row = index / n, col = index % n;
-    output[row][col] = result;
-}
-
 int main(int argc, char** argv) {
-    // Initialize the MPI environment
-    MPI_Init(NULL, NULL);
-    // Find out rank, size
-    int world_rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
-    int world_size;
-    MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-
-    // We are assuming at least 2 processes for this task
-    if (world_size < 2) {
-        fprintf(stderr, "World size must be greater than 1 for %s\n", argv[0]);
-        MPI_Abort(MPI_COMM_WORLD, 1);
-    }
-
     int m, n, k;
     cin >> m >> n >> k;
     vvi image(m, vector<int>(n));
@@ -85,37 +66,56 @@ int main(int argc, char** argv) {
         }
     }
 
-    int num_iter = m * n + world_size;
-    int process_rank = 0;
-    int result = -1;
+    // Initialize the MPI environment.
+    MPI_Init(NULL, NULL);
+    int world_rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+    int world_size;
+    MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+
+    // At least 2 processes (1 master and 1 slave) are required for this task.
+    if (world_size < 2) {
+        fprintf(stderr, "World size must be greater than 1 for %s\n", argv[0]);
+        MPI_Abort(MPI_COMM_WORLD, 1);
+    }
+
+    int num_iter = m * n + world_size;  // number of iterations
+    int slave_rank = 0;
+    int master_rank = 0;
+    int result;
     for (int i = 1; i <= num_iter; ++i) {
-        process_rank = (process_rank + 1) % world_size;
-        if (process_rank == 0) {
-            ++process_rank;
+        // The slaves are visited in round-robin manner.
+        slave_rank = (slave_rank + 1) % world_size;
+        if (slave_rank == 0) {
+            ++slave_rank;
         }
 
-        if (world_rank == process_rank && process_rank != 0) {
-            // slave process
+        if (world_rank == slave_rank) {
+            // Slave process.
             if (i >= world_size) {
-                MPI_Send(&result, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+                // Each slave will send its computed result when it's revisited.
+                MPI_Send(&result, 1, MPI_INT, master_rank, 0, MPI_COMM_WORLD);
             }
-
             if (i <= m * n) {
                 result = convolute(image, kernel, i - 1);
             }
         }
 
-        if (world_rank == 0 && i > world_size) {
-            // The slave was revisited, and hence sent its computation
-            int index = i - world_size - 1;   // offset into the matrix
-            int num_slaves = world_size - 1;  // slave process count
-            int rank = index % num_slaves + 1;
+        if (world_rank == master_rank && i > world_size) {
+            // Master process.
+            int offset = (i - 1) - world_size;  // offset into the matrix
+            int num_slaves = world_size - 1;    // slave process count
+            int rank = offset % num_slaves + 1;
             MPI_Recv(&result, 1, MPI_INT, rank, 0, MPI_COMM_WORLD,
                      MPI_STATUS_IGNORE);
-            update(output, index, n, result);
+
+            // Evaluate {row, column} from the matrix offset and update output.
+            int row = offset / n, col = offset % n;
+            output[row][col] = result;
         }
     }
 
+    // Master prints the updated output to stdout before exiting.
     if (world_rank == 0) {
         for (int i = 0; i < m; ++i) {
             for (int j = 0; j < n; ++j) {

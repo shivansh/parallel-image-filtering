@@ -5,6 +5,7 @@
 #include "convolute.h"
 
 // NOTE: index is computed in row-major order, and starts from 0.
+// convolute computes the result of convolution at a particular matrix cell.
 int convolute(const vvi& image, const vvf& kernel, vvi& output, int index) {
     if (image.size() == 0) {
         throw invalid_argument("convolute_ref: empty image");
@@ -43,6 +44,7 @@ int convolute(const vvi& image, const vvf& kernel, vvi& output, int index) {
     return round(accumulator);
 }
 
+// convolute_ref evaluates the convolution matrix wrt to the image and kernel.
 vvi convolute_ref(const vvi& image, const vvf& kernel) {
     if (image.size() == 0) {
         throw invalid_argument("convolute_ref: empty image");
