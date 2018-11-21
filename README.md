@@ -1,4 +1,4 @@
-# CS632 Assignment 2 (Shivansh Rai)
+# CS632 Assignment 2
 
 # Instructions
 To compile the source file, execute `make`.
@@ -10,6 +10,9 @@ cat sample_input | mpirun -n <num_procs> -stdin all ./parallel
 Here `num_procs` is the number of processes (> 2).
 
 # Design
+[Problem Statement](docs/assn2.pdf)  
+[Design Sketch](docs/design.txt)
+
 Let the total number of processes to be `k`.
 Out of these processes, one process is chosen as master and the rest `k-1`
 processes are chosen as slaves.

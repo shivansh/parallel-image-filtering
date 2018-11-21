@@ -1,12 +1,12 @@
-EXECS=parallel
+EXECS=convolute
 MPICC?=mpic++
 NUMPROCS=5
 INPUT=sample_input1
 
 all: ${EXECS}
 
-parallel: parallel.cpp
-	${MPICC} -o parallel parallel.cpp
+convolute: convolute.cpp
+	${MPICC} -o convolute convolute.cpp
 
 test:
 	./test.sh ${NUMPROCS}
